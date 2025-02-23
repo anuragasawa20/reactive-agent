@@ -413,7 +413,7 @@ def display_metrics_and_charts(df, selected_tokens):
         st.warning("No data available for selected tokens.")
         return
 
-    # Create metrics section
+    # Create metrics section with contract integration
     st.markdown("### 📊 Analysis Results")
     metrics_cols = st.columns(len(selected_tokens))
 
@@ -423,18 +423,16 @@ def display_metrics_and_charts(df, selected_tokens):
             avg_sentiment = token_data["sentiment"].mean()
             tweet_count = len(token_data)
 
+            # Get contract metrics
+            token_balance = contract_integrator.get_token_balance(token)
+            pending_swaps = contract_integrator.get_pending_swaps()
+
             with metrics_cols[idx]:
-                st.markdown(
-                    f"""
-                    <div style="padding: 1rem; background: linear-gradient(45deg, #1E1E1E, #2E2E2E); border-radius: 10px; border: 1px solid #4CAF50;">
-                        <h3 style="color: #4CAF50; margin: 0; font-size: 1.2rem;">{token}</h3>
-                        <p style="color: #888; margin: 0.5rem 0;">Average Sentiment</p>
-                        <h4 style="color: #4CAF50; margin: 0; font-size: 1.8rem;">{avg_sentiment:.2f}</h4>
-                        <p style="color: #888; margin: 0.5rem 0;">Tweets Analyzed: {tweet_count}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                st.metric("Token", token)
+                st.metric("Sentiment", f"{avg_sentiment:.2f}")
+                st.metric("Tweets Analyzed", tweet_count)
+                st.metric("Token Balance", f"{token_balance:.4f}")
+                st.metric("Pending Swaps", pending_swaps)
 
     # Create sentiment trend chart
     st.markdown("### 📈 Sentiment Visualizations")

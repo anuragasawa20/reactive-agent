@@ -184,25 +184,23 @@ class ContractIntegrator:
                 amount = self.w3.to_wei(0.1, "ether")  # Standard amount for testing
 
                 if sentiment_score > 0:
-                    # Positive sentiment - Buy action
-                    cprint(f"🔄 Initiating buy for {token}", "cyan")
-                    return self._execute_buy(amount)
+                    # Positive sentiment - Approve and swap token0 for token1
+                    cprint(f"🔄 Initiating token0 to token1 swap for {token}", "cyan")
+                    return self._execute_token_swap(self.token1, amount)
                 else:
-                    # Negative sentiment - Sell action
-                    cprint(f"🔄 Initiating sell for {token}", "cyan")
-                    return self._execute_sell(amount)
+                    # Negative sentiment - Approve and swap token1 for token0
+                    cprint(f"🔄 Initiating token1 to token0 swap for {token}", "cyan")
+                    return self._execute_token_swap(self.token2, amount)
             return True
         except Exception as e:
             cprint(f"❌ Error handling sentiment: {e}", "red")
             return False
 
-    def _execute_buy(self, amount: int):
-        """Execute buy transaction"""
+    def _execute_token_swap(self, token: str, amount: int):
+        """Execute token swap through ApprovalMagicSwap"""
         try:
             # First approve the swap contract
-            tx = self.token1.functions.approve(
-                ADDRESSES["SWAP"], amount
-            ).build_transaction(
+            tx = token.functions.approve(ADDRESSES["SWAP"], amount).build_transaction(
                 {
                     "from": self.account.address,
                     "nonce": self.w3.eth.get_transaction_count(self.account.address),
@@ -216,75 +214,9 @@ class ContractIntegrator:
 
             if receipt.status == 1:
                 cprint("✅ Approval successful", "green")
-                # Now execute the swap
-                swap_tx = self.swap.functions.swapExactETHForTokens(
-                    amount, self.account.address
-                ).build_transaction(
-                    {
-                        "from": self.account.address,
-                        "value": amount,
-                        "gas": 200000,
-                        "nonce": self.w3.eth.get_transaction_count(
-                            self.account.address
-                        ),
-                    }
-                )
-
-                signed_swap = self.account.sign_transaction(swap_tx)
-                swap_hash = self.w3.eth.send_raw_transaction(signed_swap.rawTransaction)
-                swap_receipt = self.w3.eth.wait_for_transaction_receipt(swap_hash)
-
-                if swap_receipt.status == 1:
-                    cprint("✅ Buy executed successfully", "green")
-                    return True
+                return True
             return False
 
         except Exception as e:
-            cprint(f"❌ Error executing buy: {e}", "red")
-            return False
-
-    def _execute_sell(self, amount: int):
-        """Execute sell transaction"""
-        try:
-            # First approve the swap contract
-            tx = self.token2.functions.approve(
-                ADDRESSES["SWAP"], amount
-            ).build_transaction(
-                {
-                    "from": self.account.address,
-                    "nonce": self.w3.eth.get_transaction_count(self.account.address),
-                }
-            )
-
-            # Sign and send approval
-            signed_tx = self.account.sign_transaction(tx)
-            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-
-            if receipt.status == 1:
-                cprint("✅ Approval successful", "green")
-                # Now execute the swap
-                swap_tx = self.swap.functions.swapExactTokensForETH(
-                    amount, self.account.address
-                ).build_transaction(
-                    {
-                        "from": self.account.address,
-                        "gas": 200000,
-                        "nonce": self.w3.eth.get_transaction_count(
-                            self.account.address
-                        ),
-                    }
-                )
-
-                signed_swap = self.account.sign_transaction(swap_tx)
-                swap_hash = self.w3.eth.send_raw_transaction(signed_swap.rawTransaction)
-                swap_receipt = self.w3.eth.wait_for_transaction_receipt(swap_hash)
-
-                if swap_receipt.status == 1:
-                    cprint("✅ Sell executed successfully", "green")
-                    return True
-            return False
-
-        except Exception as e:
-            cprint(f"❌ Error executing sell: {e}", "red")
+            cprint(f"❌ Error executing swap: {e}", "red")
             return False
